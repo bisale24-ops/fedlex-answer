@@ -1,60 +1,30 @@
-# Hack Apertus — project template
+# Fedlex Answer — Hack Apertus 2026, Track 2B
 
-Template repository for [Hack Apertus](https://hackapertus.ch/) submissions.
-Every project keeps almost the same layout, so organizers and judges find the
-same things in the same place.
+Ask what Swiss federal law says, in German, French or Italian, and get the answer with the paragraph it
+comes from. Built on Apertus 1.5; runs on-premise or air-gapped.
 
-## Select your track
+Apertus alone answers 41% of 1,611 statute questions correctly and 52% confidently wrong
+([Swiss Statute QA](https://huggingface.co/datasets/KHLab/swiss-statute-qa)). Fedlex Answer makes the model read
+the law before it answers and checks that it did:
 
-This repository holds one example project per track:
+1. **Retrieve** the best paragraphs from the 16 federal acts in force (BM25, standard library, no embeddings service).
+2. **Answer** from those paragraphs only: Apertus names the source paragraph, copies the words that decide the
+   case, then answers, or says the acts do not contain it.
+3. **Verify** in code: the quote must be verbatim in the cited paragraph and every number in the answer must be in
+   the quote. Otherwise the answer is withheld and the user sees why.
 
-- `track_1a/`
-- `track_1b/`
-- `track_2a/`
-- `track_2b/`
+| On Swiss Statute QA (1,611 prompts) | Correct | Wrong | Not answered |
+|---|---|---|---|
+| Apertus 70B, closed book | 41% | 52% | 7% |
+| **Fedlex Answer with Apertus 70B** | **83%** | **6%** | 10% |
+| Apertus 8B, closed book | 19% | 26% | 55% |
+| **Fedlex Answer with Apertus 8B** | **76%** | **9%** | 16% |
 
-Keep the directory for the track you are competing in **exactly as it is** —
-don't rename it or move its files — and delete the other track directories.
-That directory is your project root. Keep the files and directories as shown
-below.
+- Demo video (1:47): https://youtu.be/CbTLmXqyZwQ
+- Project root: [`track_2b/`](track_2b/) · report: [`track_2b/technical_report.md`](track_2b/technical_report.md)
+- Run it: `cd track_2b && make run` → http://localhost:8080 (needs `LLM_API_KEY` for the Hack Apertus endpoint, or
+  `LLM_BASE_URL` for your own Apertus server)
+- Air-gapped: `make airgap` (vLLM serving Apertus 1.5 8B from `./weights`, internal network only)
+- Re-check every published number without a model: `make eval`
 
-## The structure
-
-| Path | What it is |
-| --- | --- |
-| `README.md` | The challenge description and submission requirements for your track |
-| `technical_report.md` | The deeper write-up: architecture, evaluation, limitations |
-| `Makefile` | `make run` must spin up your project |
-| `src/` | Your code |
-| `data/` | Datasets — `track_1a`, `track_2a` and `track_2b` only; max. 100 MB |
-| `findings/` | Issue files — `track_1a` only |
-| `docs/` | Diagrams, notes, longer write-ups |
-
-## Run it
-
-Judges run `make run` from the root of the project, on a clean checkout:
-
-```bash
-make run
-```
-
-`make run` is expected to run the project using Docker, since that
-is how the judges will run it.
-- If you used other local open-weight models, include instructions for running the project in your technical report.
-- Use the following environment variables:
-```
-LLM_NAME — name and version of the model
-LLM_BASE_URL — endpoint base URL
-LLM_API_KEY — your API key
-```
-
-## Getting started
-
-1. Click **Use this template** to create your own repository.
-2. Delete the other track directories. Don't rename or restructure yours.
-3. Read its `README.md` and fill in `technical_report.md`.
-4. Make `make run` work from the root of the project, on a clean checkout.
-
-## License
-
-All Hack Apertus projects are open-sourced. Please check our Terms & Conditions for specific licensing details (6. What you build is open source): https://hackapertus.ch/terms-and-conditions
+Code: Apache-2.0. Statute text: Swiss federal enactments, not protected by copyright (Art. 5 URG).

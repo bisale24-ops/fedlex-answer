@@ -1,0 +1,54 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 760 270" width="760" height="270" font-family="Helvetica Neue, Arial, sans-serif">
+  <rect x="0" y="0" width="760" height="270" fill="#ffffff"/>
+  <text x="16" y="24" font-size="15" font-weight="600" fill="#1d1f22">Fedlex Answer: one container, one model endpoint, nothing else at runtime</text>
+  <!-- boundary -->
+  <rect x="150" y="44" width="430" height="206" rx="10" fill="#f6f8f8" stroke="#016a71" stroke-dasharray="5 4"/>
+  <text x="162" y="62" font-size="11" fill="#016a71">container (Python standard library) · data baked in at build time</text>
+  <!-- user -->
+  <rect x="14" y="120" width="110" height="46" rx="8" fill="#fff" stroke="#c9c7c1"/>
+  <text x="69" y="139" font-size="12" text-anchor="middle" fill="#1d1f22">Question</text>
+  <text x="69" y="155" font-size="11" text-anchor="middle" fill="#63666b">de · fr · it</text>
+  <line x1="124" y1="143" x2="170" y2="143" stroke="#63666b" marker-end="url(#a)"/>
+  <!-- retrieve -->
+  <rect x="170" y="78" width="120" height="62" rx="8" fill="#fff" stroke="#c9c7c1"/>
+  <text x="230" y="100" font-size="12" font-weight="600" text-anchor="middle" fill="#1d1f22">1 Retrieve</text>
+  <text x="230" y="116" font-size="10.5" text-anchor="middle" fill="#63666b">BM25 over 14.5k</text>
+  <text x="230" y="130" font-size="10.5" text-anchor="middle" fill="#63666b">paragraphs per language</text>
+  <!-- corpus -->
+  <rect x="170" y="170" width="120" height="62" rx="8" fill="#fff" stroke="#c9c7c1"/>
+  <text x="230" y="192" font-size="12" font-weight="600" text-anchor="middle" fill="#1d1f22">16 federal acts</text>
+  <text x="230" y="208" font-size="10.5" text-anchor="middle" fill="#63666b">Fedlex consolidations</text>
+  <text x="230" y="222" font-size="10.5" text-anchor="middle" fill="#63666b">in force 2026-10-01</text>
+  <line x1="230" y1="170" x2="230" y2="142" stroke="#63666b" marker-end="url(#a)"/>
+  <!-- answer -->
+  <rect x="312" y="78" width="120" height="62" rx="8" fill="#fff" stroke="#c9c7c1"/>
+  <text x="372" y="100" font-size="12" font-weight="600" text-anchor="middle" fill="#1d1f22">2 Answer</text>
+  <text x="372" y="116" font-size="10.5" text-anchor="middle" fill="#63666b">source, quote, answer</text>
+  <text x="372" y="130" font-size="10.5" text-anchor="middle" fill="#63666b">or NOT_FOUND</text>
+  <line x1="290" y1="109" x2="310" y2="109" stroke="#63666b" marker-end="url(#a)"/>
+  <!-- verify -->
+  <rect x="454" y="78" width="112" height="62" rx="8" fill="#fff" stroke="#c9c7c1"/>
+  <text x="510" y="100" font-size="12" font-weight="600" text-anchor="middle" fill="#1d1f22">3 Verify</text>
+  <text x="510" y="116" font-size="10.5" text-anchor="middle" fill="#63666b">quote is verbatim;</text>
+  <text x="510" y="130" font-size="10.5" text-anchor="middle" fill="#63666b">numbers are in it</text>
+  <line x1="432" y1="109" x2="452" y2="109" stroke="#63666b" marker-end="url(#a)"/>
+  <!-- second pass -->
+  <path d="M372 140 C372 175, 300 175, 292 160" fill="none" stroke="#9a988e" stroke-dasharray="4 3" marker-end="url(#a)"/>
+  <text x="312" y="188" font-size="10" fill="#63666b">not found: model names the article,</text>
+  <text x="312" y="201" font-size="10" fill="#63666b">search again (text still decides)</text>
+  <!-- model -->
+  <rect x="312" y="216" width="120" height="0" fill="none"/>
+  <rect x="604" y="44" width="142" height="96" rx="8" fill="#fff" stroke="#c9c7c1"/>
+  <text x="675" y="66" font-size="12" font-weight="600" text-anchor="middle" fill="#1d1f22">Apertus 1.5</text>
+  <text x="675" y="84" font-size="10.5" text-anchor="middle" fill="#63666b">OpenAI-compatible API</text>
+  <text x="675" y="100" font-size="10.5" text-anchor="middle" fill="#63666b">on-prem vLLM (8B), or</text>
+  <text x="675" y="114" font-size="10.5" text-anchor="middle" fill="#63666b">CSCS Lugano (70B)</text>
+  <line x1="566" y1="84" x2="602" y2="84" stroke="#016a71" stroke-dasharray="3 3"/>
+  <!-- output -->
+  <rect x="604" y="170" width="142" height="62" rx="8" fill="#fff" stroke="#c9c7c1"/>
+  <text x="675" y="192" font-size="12" font-weight="600" text-anchor="middle" fill="#1d1f22">Answer + paragraph</text>
+  <text x="675" y="208" font-size="10.5" text-anchor="middle" fill="#63666b">quote highlighted,</text>
+  <text x="675" y="222" font-size="10.5" text-anchor="middle" fill="#63666b">Fedlex link · or withheld</text>
+  <line x1="566" y1="120" x2="640" y2="168" stroke="#63666b" marker-end="url(#a)"/>
+  <defs><marker id="a" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto"><path d="M0 0L10 5L0 10z" fill="#63666b"/></marker></defs>
+</svg>

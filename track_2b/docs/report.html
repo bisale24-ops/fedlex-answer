@@ -1,0 +1,97 @@
+<!doctype html><html><head><meta charset='utf-8'><style>
+@page { size: A4; margin: 15mm 16mm 15mm 16mm; }
+body { font: 9.4pt/1.42 'Helvetica Neue', Arial, sans-serif; color: #1d1d1f; }
+h1 { font-size: 16pt; line-height: 1.2; margin: 0 0 6pt; }
+h2 { font-size: 12pt; margin: 12pt 0 4pt; border-bottom: 1px solid #d2d2d7; padding-bottom: 2pt; }
+h3 { font-size: 10pt; margin: 8pt 0 3pt; }
+p, li { margin: 0 0 5pt; }
+ul { padding-left: 14pt; margin: 0 0 5pt; }
+blockquote { margin: 0 0 8pt; padding: 6pt 10pt; background: #f5f5f7; border-left: 3px solid #c8102e; }
+table { border-collapse: collapse; width: 100%; margin: 4pt 0 8pt; font-size: 8.6pt; }
+th, td { border-bottom: 1px solid #e5e5ea; padding: 3pt 4pt; text-align: left; vertical-align: top; }
+th { background: #f5f5f7; }
+code { font: 8.4pt Menlo, monospace; background: #f5f5f7; padding: 0 2px; border-radius: 2px; }
+hr { border: 0; border-top: 1px solid #d2d2d7; margin: 6pt 0; }
+figure { margin: 2pt 0 8pt; text-align: center; break-inside: avoid; }
+figure svg { width: 82%; height: auto; }
+</style></head><body><h1>Technical report — Fedlex Answer</h1>
+<p>A deeper write-up than the README: what was built, how it works, and what the numbers say.</p>
+<ul><li><strong>Track:</strong> Track 2B — Fedlex Answer</li><li><strong>Event:</strong> Online</li><li><strong>Team:</strong> KHLab — Aleksandr Khrukalo</li><li><strong>Demo:</strong> <a href='https://youtu.be/CbTLmXqyZwQ'>video, 1:47</a>, <code>make run</code> for the app, <code>make eval</code> for every number below</li></ul>
+<h2>1. Summary</h2>
+<p>Residents and front-desk officials ask short questions whose answer is fixed by a federal act: a notice period, an objection deadline, a quorum. Asked directly, Apertus 70B answers 41% of 1,611 such questions correctly and 52% confidently wrong, and on rules amended since 2021 it states the old value more often than the current one (Swiss Statute QA, our Track 1B dataset). Fedlex Answer makes Apertus answer from the statute and checks in code that it did: retrieve the paragraphs, have the model name its source paragraph and copy the words that decide the case, and withhold any answer whose quote is not in the paragraph or whose numbers are not in the quote. On the same 1,611 questions, Apertus 70B goes from <strong>41% correct / 52% wrong to 83% correct / 6% wrong</strong>, and the 8B model that fits on one GPU from 19% / 26% to 76% / 9%, every answer carries a Fedlex link and the highlighted wording, and the whole system is one standard-library Python container that runs next to an on-premise or air-gapped Apertus.</p>
+<h2>2. Architecture</h2>
+<figure><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 760 270" width="760" height="270" font-family="Helvetica Neue, Arial, sans-serif">
+  <rect x="0" y="0" width="760" height="270" fill="#ffffff"/>
+  <text x="16" y="24" font-size="15" font-weight="600" fill="#1d1f22">Fedlex Answer: one container, one model endpoint, nothing else at runtime</text>
+  <!-- boundary -->
+  <rect x="150" y="44" width="430" height="206" rx="10" fill="#f6f8f8" stroke="#016a71" stroke-dasharray="5 4"/>
+  <text x="162" y="62" font-size="11" fill="#016a71">container (Python standard library) · data baked in at build time</text>
+  <!-- user -->
+  <rect x="14" y="120" width="110" height="46" rx="8" fill="#fff" stroke="#c9c7c1"/>
+  <text x="69" y="139" font-size="12" text-anchor="middle" fill="#1d1f22">Question</text>
+  <text x="69" y="155" font-size="11" text-anchor="middle" fill="#63666b">de · fr · it</text>
+  <line x1="124" y1="143" x2="170" y2="143" stroke="#63666b" marker-end="url(#a)"/>
+  <!-- retrieve -->
+  <rect x="170" y="78" width="120" height="62" rx="8" fill="#fff" stroke="#c9c7c1"/>
+  <text x="230" y="100" font-size="12" font-weight="600" text-anchor="middle" fill="#1d1f22">1 Retrieve</text>
+  <text x="230" y="116" font-size="10.5" text-anchor="middle" fill="#63666b">BM25 over 14.5k</text>
+  <text x="230" y="130" font-size="10.5" text-anchor="middle" fill="#63666b">paragraphs per language</text>
+  <!-- corpus -->
+  <rect x="170" y="170" width="120" height="62" rx="8" fill="#fff" stroke="#c9c7c1"/>
+  <text x="230" y="192" font-size="12" font-weight="600" text-anchor="middle" fill="#1d1f22">16 federal acts</text>
+  <text x="230" y="208" font-size="10.5" text-anchor="middle" fill="#63666b">Fedlex consolidations</text>
+  <text x="230" y="222" font-size="10.5" text-anchor="middle" fill="#63666b">in force 2026-10-01</text>
+  <line x1="230" y1="170" x2="230" y2="142" stroke="#63666b" marker-end="url(#a)"/>
+  <!-- answer -->
+  <rect x="312" y="78" width="120" height="62" rx="8" fill="#fff" stroke="#c9c7c1"/>
+  <text x="372" y="100" font-size="12" font-weight="600" text-anchor="middle" fill="#1d1f22">2 Answer</text>
+  <text x="372" y="116" font-size="10.5" text-anchor="middle" fill="#63666b">source, quote, answer</text>
+  <text x="372" y="130" font-size="10.5" text-anchor="middle" fill="#63666b">or NOT_FOUND</text>
+  <line x1="290" y1="109" x2="310" y2="109" stroke="#63666b" marker-end="url(#a)"/>
+  <!-- verify -->
+  <rect x="454" y="78" width="112" height="62" rx="8" fill="#fff" stroke="#c9c7c1"/>
+  <text x="510" y="100" font-size="12" font-weight="600" text-anchor="middle" fill="#1d1f22">3 Verify</text>
+  <text x="510" y="116" font-size="10.5" text-anchor="middle" fill="#63666b">quote is verbatim;</text>
+  <text x="510" y="130" font-size="10.5" text-anchor="middle" fill="#63666b">numbers are in it</text>
+  <line x1="432" y1="109" x2="452" y2="109" stroke="#63666b" marker-end="url(#a)"/>
+  <!-- second pass -->
+  <path d="M372 140 C372 175, 300 175, 292 160" fill="none" stroke="#9a988e" stroke-dasharray="4 3" marker-end="url(#a)"/>
+  <text x="312" y="188" font-size="10" fill="#63666b">not found: model names the article,</text>
+  <text x="312" y="201" font-size="10" fill="#63666b">search again (text still decides)</text>
+  <!-- model -->
+  <rect x="312" y="216" width="120" height="0" fill="none"/>
+  <rect x="604" y="44" width="142" height="96" rx="8" fill="#fff" stroke="#c9c7c1"/>
+  <text x="675" y="66" font-size="12" font-weight="600" text-anchor="middle" fill="#1d1f22">Apertus 1.5</text>
+  <text x="675" y="84" font-size="10.5" text-anchor="middle" fill="#63666b">OpenAI-compatible API</text>
+  <text x="675" y="100" font-size="10.5" text-anchor="middle" fill="#63666b">on-prem vLLM (8B), or</text>
+  <text x="675" y="114" font-size="10.5" text-anchor="middle" fill="#63666b">CSCS Lugano (70B)</text>
+  <line x1="566" y1="84" x2="602" y2="84" stroke="#016a71" stroke-dasharray="3 3"/>
+  <!-- output -->
+  <rect x="604" y="170" width="142" height="62" rx="8" fill="#fff" stroke="#c9c7c1"/>
+  <text x="675" y="192" font-size="12" font-weight="600" text-anchor="middle" fill="#1d1f22">Answer + paragraph</text>
+  <text x="675" y="208" font-size="10.5" text-anchor="middle" fill="#63666b">quote highlighted,</text>
+  <text x="675" y="222" font-size="10.5" text-anchor="middle" fill="#63666b">Fedlex link · or withheld</text>
+  <line x1="566" y1="120" x2="640" y2="168" stroke="#63666b" marker-end="url(#a)"/>
+  <defs><marker id="a" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto"><path d="M0 0L10 5L0 10z" fill="#63666b"/></marker></defs>
+</svg>
+</figure>
+<ol><li><strong>Retrieve.</strong> All paragraphs of 16 federal acts (BV, BPR, BüG, AIG, ZGB, OR, ArG, AHVG, KVG, EOG, AVIG, SchKG, ZPO, VwVG, StGB, SVG) in the version in force on 2026-10-01, fetched from Fedlex and baked into the image: 14,549 / 14,506 / 14,533 paragraphs in de / fr / it. BM25 over words plus five-letter prefixes (a cheap stand-in for stemming that also matches parts of German compounds), act name and article title prepended to each paragraph. Top 8 go to the model. The gold paragraph is among them for 94% of the questions.</li><li><strong>Answer.</strong> Apertus gets the numbered paragraphs, without their leading paragraph numbers (with them, “4 5 Prozent” — paragraph 4, five percent — was read as 4.5 percent), and must reply in three lines: <code>SOURCE: P&lt;n&gt;</code>, <code>QUOTE:</code> the shortest words that decide the case, copied verbatim, and <code>ANSWER:</code>, or <code>NOT_FOUND</code>. Asking for the source and quote <em>before</em> the answer fixed a reading error on the notice-period question (OR 335c: the model answered “three months” for the fifth year of service when the answer came last, “two months” when the quote came first).</li><li><strong>Verify.</strong> The quote must occur verbatim (whitespace and punctuation normalised) in the cited paragraph; if it occurs in another retrieved paragraph, the citation moves there. Every number in the answer — digits or number words in four languages, fractions and percentages (“50 %” = “die Hälfte”) — must be stated in the quote. Otherwise the answer is withheld and the page says why.</li><li><strong>Second pass.</strong> When the first pass finds nothing, Apertus is asked which articles regulate the question (“BV 139”) and which terms the statute would use; those articles and a new search go back through steps 2–3. The model’s memory is used to <em>navigate</em>, never as the source of the answer.</li></ol>
+<p><strong>Target architecture: (a) on-premise and (b) air-gapped.</strong> The app is Python standard library only, with the corpus and the index built into the image; at runtime it talks to one OpenAI-compatible endpoint and nothing else. <code>make run</code> points it at the Hack Apertus endpoint (CSCS, Lugano) or any Apertus server via <code>LLM_BASE_URL</code>. <code>make airgap</code> starts the app and vLLM serving Apertus 1.5 8B from local weights on a Docker network marked <code>internal</code> (no route out); only the app's port is published. Build time needs Fedlex once (to fetch the acts); runtime needs no network. We tested the app container and the evaluation; the vLLM profile was written but not run here (no GPU available to us).</p>
+<h2>3. Use of Apertus</h2>
+<ul><li><strong>Model:</strong> <code>swiss-ai/Apertus-v1.5-70B</code> (main results) and <code>swiss-ai/Apertus-v1.5-8B</code> (the size an organisation can host on one GPU), instruct, as served.</li><li><strong>How it is used:</strong> inference (answering with source and quote; naming the governing article on the second pass) and evaluation (Apertus 70B as the grading judge, the same judge as in Swiss Statute QA).</li><li><strong>Where it runs:</strong> the Hack Apertus endpoint at CSCS for all numbers here; any OpenAI-compatible Apertus server in deployment. Temperature 0, 160 output tokens.</li></ul>
+<h2>4. Data</h2>
+<ul><li><strong>Statute text:</strong> Fedlex consolidated acts (SPARQL endpoint and HTML filestore). Swiss federal enactments are not protected by copyright (Art. 5 para. 1 lit. a URG). 13 MB in <code>data/corpus/</code>.</li><li><strong>Evaluation set:</strong> <a href='https://huggingface.co/datasets/KHLab/swiss-statute-qa'>Swiss Statute QA</a> (our Track 1B dataset, CDLA-Permissive-2.0): 537 facts, 1,611 prompts in de/fr/it, each with a verified answer and the paragraph it comes from.</li><li><strong>Out-of-scope set:</strong> 15 questions in de/fr/it whose answers live elsewhere (cantonal and municipal law, federal ordinances, other acts), written for this project, <code>data/out_of_scope/</code>.</li><li>No personal data anywhere; questions are about law, not people.</li></ul>
+<h2>5. Evaluation</h2>
+<p><strong>Task and metric.</strong> Each of the 1,611 prompts is asked through the full system; the answer is graded correct / incorrect / not attempted by the Apertus 70B judge used in Swiss Statute QA (gold answer, aliases and statute evidence in its prompt). Withheld and not-found answers count as not attempted. A deterministic rule grader is reported alongside. <strong>Baseline:</strong> the same model asked the same questions closed book (from Swiss Statute QA).</p>
+<table><tr><th>Setup (Apertus 1.5)</th><th>Correct</th><th>Wrong</th><th>Not answered</th><th>Wrong when it answers</th></tr><tr><td>70B closed book (baseline)</td><td>41.0%</td><td>52.3%</td><td>6.8%</td><td>56.1%</td></tr><tr><td><strong>70B + Fedlex Answer</strong></td><td><strong>83.5%</strong></td><td><strong>6.3%</strong></td><td>10.2%</td><td><strong>7.0%</strong></td></tr><tr><td>8B closed book (baseline)</td><td>18.7%</td><td>26.0%</td><td>55.3%</td><td>58.2%</td></tr><tr><td><strong>8B + Fedlex Answer</strong></td><td><strong>75.6%</strong></td><td><strong>8.8%</strong></td><td>15.6%</td><td><strong>10.4%</strong></td></tr></table>
+<ul><li><strong>Every answer is cited.</strong> The cited paragraph is the dataset's gold paragraph in 88.0% of prompts (8B: 81.4%) (the rest cite another paragraph that also states the answer, or are not answered). The rule grader agrees: 81.3% correct (8B: 74.3%).</li><li><strong>Amended law.</strong> On paragraphs changed since 2021, closed-book 70B was right 30% (amended) and 18% (new); through Fedlex Answer 70B is right 81% and 82% (unchanged paragraphs: 84%), because it reads the text in force; 8B: 69%, 73%, 77%.</li><li><strong>Languages.</strong> 70B: de 84.9%, fr 81.8%, it 83.8% correct. 8B: de 78.0%, fr 78.8%, it 70.0%; Italian is the 8B model's weakest language with the statute in front of it too.</li><li><strong>Out of scope (45 prompts).</strong> Closed book, 70B gave a concrete figure for 27 of 45 questions it has no source for. Fedlex Answer declined 40 of 45. Of the 5 it answered, 2 are correct deferrals (“the Federal Council sets the limit”, SVG 31 and 55), 1 is a non-answer, and <strong>2 are wrong</strong>: 40 km/h and 1.6 per mille, numbers that do stand in SVG Art. 90 and 15d but govern other cases. The verifier cannot catch a quote that is true but answers a different question; this is the main remaining failure mode.</li><li><strong>Out of scope, 8B.</strong> Closed book it gave a figure 23 / 45 times; with Fedlex Answer it declined 38 / 45. Of the 7 answers, 1 is a correct deferral, 2 are non-answers and 4 are wrong in the same way as 70B's: 30 km/h (SVG 90) and “at most eight” public holidays for the canton of Zurich, which is the federal cap in ArG 20a, not Zurich's number.</li><li><strong>Latency:</strong> median 1.5 s, 90th percentile 2.5 s per question with 70B; 0.6 s and 1.9 s with 8B; including the second pass when needed.</li><li><strong>One fix after the first run, applied to both models.</strong> The first 8B run answered only 32% of Italian questions correctly: 8B often replies <code>P1</code> / the quote / the answer on bare lines without the <code>SOURCE:</code> label, and the parser withheld those as having no source. The parser now reads unlabeled lines by position (unit-tested); the 322 affected prompts (311 for 8B, 11 for 70B) were re-asked, and the verifier rules did not change. Every request and response of the final run is in <code>data/runs/</code>.</li></ul>
+<h2>6. Limitations</h2>
+<ul><li>The verifier checks <em>that</em> the answer is in the quote, not that the quote governs the case asked. Both wrong out-of-scope answers and most of the 6% wrong answers are of this kind (a neighbouring rule in the same act).</li><li>16 acts, federal level only. Cantonal law and ordinances (speed limits, blood-alcohol limits, indexed amounts) are out of scope and answered as “not in these acts”, not from them.</li><li>Retrieval is lexical: questions phrased far from the statute's wording rely on the second pass. Recall in the top 8 is 94%; an embedding index would help but would add a model to host.</li><li>The evaluation questions were written from the statute paragraphs (Track 1B), which favours lexical retrieval; real users' phrasing will be harder. The out-of-scope set is small (45 prompts).</li><li>The air-gapped vLLM profile is untested on our side (no GPU); the app itself was run and evaluated.</li></ul>
+<h2>7. Reproducibility</h2>
+<p><code>make eval</code> re-grades the recorded answers (<code>data/runs/</code>, every request and response) and compares the published numbers with <code>data/results/expected.json</code>; it needs no network, no GPU and no key. <code>make test</code> runs the unit tests (retrieval, parsing, the verifier, the second pass, each with a fake model). <code>make run</code> serves the app; <code>python -m fa.evaluate --live</code> re-asks every question against the endpoint in <code>LLM_BASE_URL</code>. Temperature 0; the endpoint, model names and dates are recorded with each run.</p>
+<h2>8. Next steps</h2>
+<ul><li>A second verifier step that asks whether the quoted words apply to the situation in the question (the remaining failure mode above), with the out-of-scope set grown to a few hundred prompts.</li><li>Ordinances and cantonal law for one canton, which is where most residents' questions end.</li><li>A citation-first answer card for public-administration front desks, logging every answer with its quote.</li></ul>
+<h2>License</h2>
+<p>Code: Apache-2.0. Report: CC-BY-4.0. Statute text: not protected by copyright (Art. 5 URG).</p>
+<h2>References</h2>
+<p>Swiss Statute QA (KHLab, Hack Apertus 2026 Track 1B), huggingface.co/datasets/KHLab/swiss-statute-qa · Apertus tech report, arXiv:2509.14233 · Robertson &amp; Zaragoza, <em>The Probabilistic Relevance Framework: BM25 and Beyond</em> (2009) · Fedlex, Federal Chancellery, fedlex.admin.ch.</p></body></html>

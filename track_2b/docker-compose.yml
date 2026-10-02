@@ -1,0 +1,42 @@
+# Two ways to run Fedlex Answer.
+#
+#   make run        app only; Apertus is reached at LLM_BASE_URL (default: the Hack Apertus endpoint
+#                   at CSCS, Lugano). On-premise: point LLM_BASE_URL at your own vLLM.
+#   make airgap     app + vLLM serving Apertus 1.5 8B from local weights on an internal network with
+#                   no route outside. Needs an NVIDIA GPU (>= 24 GB) and the weights in ./weights.
+services:
+  app:
+    build: .
+    ports: ["8080:8080"]
+    environment:
+      LLM_BASE_URL: ${LLM_BASE_URL:-https://hackapertus.livemap.sh/v1}
+      LLM_API_KEY: ${LLM_API_KEY:-}
+      LLM_NAME: ${LLM_NAME:-apertus-v1.5-70b}
+
+  app-airgap:
+    profiles: ["airgap"]
+    build: .
+    ports: ["8080:8080"]
+    networks: [internal, edge]
+    environment:
+      LLM_BASE_URL: http://apertus:8000/v1
+      LLM_API_KEY: local
+      LLM_NAME: apertus-v1.5-8b
+    depends_on: [apertus]
+
+  apertus:
+    profiles: ["airgap"]
+    image: vllm/vllm-openai:v0.11.0
+    command: ["--model", "/weights/Apertus-v1.5-8B", "--served-model-name", "apertus-v1.5-8b",
+              "--max-model-len", "16384", "--port", "8000"]
+    volumes: ["./weights:/weights:ro"]
+    environment: {HF_HUB_OFFLINE: "1", VLLM_NO_USAGE_STATS: "1", DO_NOT_TRACK: "1"}
+    networks: [internal]
+    deploy:
+      resources:
+        reservations:
+          devices: [{driver: nvidia, count: 1, capabilities: [gpu]}]
+
+networks:
+  internal: {internal: true}   # no route to the internet
+  edge: {}                     # only the app's port 8080 is published
